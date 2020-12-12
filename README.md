@@ -1,12 +1,11 @@
 #### Autonomous Vehicles Team 5 Computer Vision and ROS Package
 
 Ka Ming Chan
-A13771194
+Evan Kim
+Joseph Fallon
 
-The test image data is found online, since our team is currently having issue with using NoMachine to operate the hardware assembly which is composed of the camera and the Jetson. We seemed to be unable to collect our own data yet. I am a remote student who does not have the hardwares in hand, and therefore I chose this alternative way. The code and sample data are found online in a Medium article, in which the author states that they are free to use. I used it as an example to gain experience on creating a disparity map between two pictures taken by the same stereo camera, and then generating a 3D point cloud out of that disparity map. This process is the key for meauring depth, or the distances of the objects inside an image, which reinforces object recognition. I was responsible for researching the theories of depth in stereo images.
+This package includes the code for both the image processing for path finding on a lane, as well as the ROS code which commands the autonomous vehicle. The ROS code can not be run, while the image processing using OpenCV can. Therefore, run.py will be only executing the modified code for the image processing. The results will go into the directory test/testresults, as output images, to demonstrate our understanding of using computer vision to navigate our robot. Both ai_drive.py and lane_utils.py inside the src folder plainly serve as the demonstration of our group's process, and do not get run in run.py. For a detailed explanation of the code for image processing, access the Jupyter notebook.
 
-For this assignment, my code's target is to create the sample_3d_pointcloud.ply file in the "results" folder.
+The test image data are captured by our robot assembly in the UCSD tent. They are pictures of the track which simulates a race track. 
 
-References:
-https://medium.com/analytics-vidhya/depth-sensing-and-3d-reconstruction-512ed121aa60
-https://github.com/umangkshah/notebooks/tree/master/3d_reconstruction
+If the input target is "test", the images for both lane detection and the path of centroids are created inside the directory test/testresults. If the target is "lane", the result image is only the detected lane. If the target is "centroids", the result image is the detected lane with the found centroids plotted on them.

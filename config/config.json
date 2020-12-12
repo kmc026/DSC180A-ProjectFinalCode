@@ -1,8 +1,5 @@
 {
-    "left_image_dir": "test/testdata/image1.png",
-    "right_image_dir": "test/testdata/image2.png",
-    "num_disparities": 96,
-    "block_size": 11,
-    "calibration_file_dir": "calib/calibration_data.txt",
-    "result_dir": "results/sample_3d_pointcloud.ply" 
+    "test_image_dir": "test/testdata/img_19.png",
+    "lane_image_result_dir": "test/testresults/lane_img.png",
+    "lane_centroids_image_result_dir": "test/testresults/lane_centroids_img.png"
 }

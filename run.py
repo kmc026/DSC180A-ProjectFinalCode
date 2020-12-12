@@ -1,7 +1,8 @@
 import sys
 import json
 
-from src.main import generate_3d_pointcloud
+from src.main import find_yellow_lanes
+from src.main import find_n_largest_contours
 
 
 def main(targets):
@@ -10,7 +11,14 @@ def main(targets):
 
     if 'test' in targets:
         
-        generate_3d_pointcloud(test_config['left_image_dir'], test_config['right_image_dir'], test_config['num_disparities'], test_config['block_size'], test_config['calibration_file_dir'], test_config['result_dir'])
+        find_yellow_lanes(test_config['test_image_dir'], test_config['lane_image_result_dir'])
+        find_n_largest_contours(test_config['lane_image_result_dir'], test_config['lane_centroids_image_result_dir'])
+
+    if 'lane' in targets:
+        find_yellow_lanes(test_config['test_image_dir'], test_config['lane_image_result_dir'])
+
+    if 'centroids' in targets:
+        find_n_largest_contours(test_config['lane_image_result_dir'], test_config['lane_centroids_image_result_dir'])
 
 if __name__ == '__main__':
 

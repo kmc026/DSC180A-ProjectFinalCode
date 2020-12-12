@@ -1,115 +1,74 @@
 import numpy as np
 import cv2
 
+def find_yellow_lanes(bgr_img, result_dir):
+    hls_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HLS)
 
-def write_ply(fn, verts, colors):
-    ply_header = '''ply
-    format ascii 1.0
-    element vertex %(vert_num)d
-    property float x
-    property float y
-    property float z
-    property uchar red
-    property uchar green
-    property uchar blue
-    end_header
-    '''
-    out_colors = colors.copy()
-    verts = verts.reshape(-1, 3)
-    verts = np.hstack([verts, out_colors])
-    with open(fn, 'wb') as f:
-        f.write((ply_header % dict(vert_num=len(verts))).encode('utf-8'))
-        np.savetxt(f, verts, fmt='%f %f %f %d %d %d ')
+    #The colors are set because our track's lanes are yellow. In this case, blue.
+    lower_yellow = np.array([10, 30, 90])
+    upper_yellow = np.array([40, 220, 255])
 
+    yellow_filter = cv2.inRange(hls_img, lower_yellow, upper_yellow)
+    yellow_filtered_img = cv2.bitwise_and(bgr_img, bgr_img, mask=yellow_filter)
+    
+    cv2.imwrite(result_dir, yellow_filtered_img)
+    print('%s saved' % 'lane detection image')
 
-def generate_3d_pointcloud(left_image_dir, right_image_dir, num_disparities, block_size, calibration_file_dir, result_dir):
-    """
-    Generates the 3D Point Cloud as .ply object in the results directory
+def find_n_largest_contours(filtered_img, result_dir, n=2):
+    # find contours
+    img = filtered_img.copy()
+    imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    contours, h = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    
+    # sort contours by size
+    area_array = []
+    for i,c in enumerate(contours):
+        area = cv2.contourArea(c)
+        area_array.append(area)
+    sorted_contours = sorted(zip(area_array, contours), key=lambda x:x[0], reverse=True)
+    
+    my_contours = []
+    # top n size contours
+    for i in range(n):
+        try:
+            my_contours.append(sorted_contours[i][1])
+        except IndexError:
+            break
+    cv2.drawContours(img, my_contours, -1, (0,255,0))
 
-    Parameters
-    ----------
-    left_image_dir : string
-        The directory of the left image
-    right_image_dir : string
-        The directory of the right image
-    num_disparities : int
-        Parameter for stereo object
-    block_size : int
-        Parameter for stereo object
-    calibration_file_dir : string
-        The directory of the calibration file
-    result_dir : string
-        The directory for where the resulted .ply file should go
+    contour_centroids = []
+    excepted = False
+    # find center of top n size contours
+    for c in my_contours:
+        # center of the contour
+        M = cv2.moments(c)
+        try:
+            # cX:row, cY:col, top_left: [0,0]
+            cY = int(M["m10"] / M["m00"])
+            cX = int(M["m01"] / M["m00"])
+        except:
+            excepted=True
+        # draw the contour and center of the shape on the image
+        if excepted:
+            cX = int(img.shape[0]*0.7)
+            cY = int(img.shape[1]*0.5)
+        
+        img_center_contours = cv2.drawContours(img, [c], -1, (0, 255, 0), 2)
+        cv2.circle(img, (cY, cX), 7, (255, 0, 0), -1)
+        contour_centroids.append((cX, cY))
+        
+    # find second lowest positioned contour 
+    sorted_centroids = sorted(contour_centroids, key=lambda tup: tup[0], reverse=True)
+    
+    if len(sorted_centroids)==0:
+        cX = int(img.shape[0]*0.7)
+        cY = int(img.shape[1]*0.5)
+        cv2.circle(img, (cY, cX), 7, (255, 0, 0), -1)
 
-    Returns
-    -------
-    sample_3d_pointcloud.ply : ply file; 3D Object
-        The 3D Point Cloud
-    """
-
-    #Read the two images in grayscale
-    image1 = cv2.imread(left_image_dir, 0)
-    image2 = cv2.imread(right_image_dir, 0)
-
-    #Read the two images in color
-    image1_colored = cv2.imread(left_image_dir, 1)
-    image2_colored = cv2.imread(right_image_dir, 1)
-
-    #Generate the disparity map
-    stereo = cv2.StereoBM_create(numDisparities = num_disparities, blockSize = block_size)
-    disparity = stereo.compute(image1, image2)
-    disparity_result = disparity.copy()
-
-    #Read in calibration
-    matrix_type_1 = 'P2'
-    matrix_type_2 = 'P3'
-
-    calib_file = calibration_file_dir
-    with open(calib_file, 'r') as f:
-        fin = f.readlines()
-        for line in fin:
-            if line[:2] == matrix_type_1:
-                calib_matrix_1 = np.array(line[4:].strip().split(" ")).astype('float32').reshape(3,-1)
-            elif line[:2] == matrix_type_2:
-                calib_matrix_2 = np.array(line[4:].strip().split(" ")).astype('float32').reshape(3,-1)
-
-    #Calculate depth-to-disparity
-    cam1 = calib_matrix_1[:,:3] # left image - P2
-    cam2 = calib_matrix_2[:,:3] # right image - P3
-
-    Tmat = np.array([0.54, 0., 0.])
-
-    rev_proj_matrix = np.zeros((4,4))
-
-    cv2.stereoRectify(cameraMatrix1 = cam1,cameraMatrix2 = cam2, \
-                    distCoeffs1 = 0, distCoeffs2 = 0, \
-                    imageSize = image1_colored.shape[:2], \
-                    R = np.identity(3), T = Tmat, \
-                    R1 = None, R2 = None, \
-                    P1 =  None, P2 =  None, Q = rev_proj_matrix)
-
-    #Project disparity map onto 3D Point Cloud
-    points = cv2.reprojectImageTo3D(disparity_result, rev_proj_matrix)
-
-    #reflect on x axis
-    reflect_matrix = np.identity(3)
-    reflect_matrix[0] *= -1
-    points = np.matmul(points,reflect_matrix)
-
-    #extract colors from image
-    colors = cv2.cvtColor(image1_colored, cv2.COLOR_BGR2RGB)
-
-    #filter by min disparity
-    mask = disparity_result > disparity_result.min()
-    out_points = points[mask]
-    out_colors = colors[mask]
-
-    #filter by dimension
-    idx = np.fabs(out_points[:,0]) < 4.5
-    out_points = out_points[idx]
-    out_colors = out_colors.reshape(-1, 3)
-    out_colors = out_colors[idx]
-
-    #Output the result 3D Point Cloud
-    write_ply(result_dir, out_points, out_colors)
-    print('%s saved' % 'sample_3d_pointcloud.ply')
+    elif len(sorted_centroids)==1:
+        cY, cX = sorted_centroids[0]
+    else:
+        cY, cX = sorted_centroids[1]
+        
+    cv2.imwrite(result_dir, img_center_contours)
+    print('%s saved' % 'lanes with centroids image')
