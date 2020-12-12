@@ -8,4 +8,4 @@ This package includes the code for both the image processing for path finding on
 
 The test image data are captured by our robot assembly in the UCSD tent. They are pictures of the track which simulates a race track. 
 
-If the input target is "test", the images for both lane detection and the path of centroids are created inside the directory test/testresults. If the target is "lane", the result image is only the detected lane. If the target is "centroids", the result image is the detected lane with the found centroids plotted on them.
+If the input target is "test", the images for both lane detection and the path of centroids are created inside the directory test/testresults. If the target is "lane", the result image is only the detected lane. If the target is "centroids", the result image is the detected lane with the found centroids plotted on them. Target "lane" has to be executed before "centroids".

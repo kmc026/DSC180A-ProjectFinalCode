@@ -2,6 +2,8 @@ import numpy as np
 import cv2
 
 def find_yellow_lanes(bgr_img, result_dir):
+    bgr_img = cv2.imread(bgr_img, 1)
+
     hls_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HLS)
 
     #The colors are set because our track's lanes are yellow. In this case, blue.
@@ -15,6 +17,8 @@ def find_yellow_lanes(bgr_img, result_dir):
     print('%s saved' % 'lane detection image')
 
 def find_n_largest_contours(filtered_img, result_dir, n=2):
+    filtered_img = cv2.imread(filtered_img, 1)
+
     # find contours
     img = filtered_img.copy()
     imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
